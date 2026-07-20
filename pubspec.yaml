@@ -38,7 +38,7 @@ dependencies:
     path: third_party/ffmpeg_kit_flutter_new_min
   http: ^1.6.0
   image: ^4.5.4
-  package_info_plus: ^8.3.1
+  package_info_plus: ^10.2.1
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.2
   video_player: ^2.10.0
