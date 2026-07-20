@@ -60,6 +60,11 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # Flutter 3.44 enables Swift Package Manager by default. The macOS
+  # video_player_avfoundation package currently requires CocoaPods so that its
+  # Objective-C target can resolve the Flutter module correctly.
+  config:
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
