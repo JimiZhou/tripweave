@@ -154,8 +154,20 @@ jobs:
           retention-days: 30
 
   macos:
-    name: macOS application
-    runs-on: macos-14
+    name: macOS ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            artifact_arch: arm64
+            binary_arch: arm64
+            label: Apple Silicon
+          - runner: macos-15-intel
+            artifact_arch: x64
+            binary_arch: x86_64
+            label: Intel
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -174,6 +186,8 @@ jobs:
         run: |
           set -euo pipefail
           version=$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' pubspec.yaml)
+          artifact_arch="${{ matrix.artifact_arch }}"
+          binary_arch="${{ matrix.binary_arch }}"
           app=$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' -print -quit)
           test -n "$app"
           mkdir -p "$app/Contents/MacOS" "$app/Contents/Frameworks" dist/staging
@@ -181,18 +195,20 @@ jobs:
           cp "$(command -v ffprobe)" "$app/Contents/MacOS/ffprobe"
           dylibbundler -od -b -x "$app/Contents/MacOS/ffmpeg" -d "$app/Contents/Frameworks/" -p @executable_path/../Frameworks/
           dylibbundler -od -b -x "$app/Contents/MacOS/ffprobe" -d "$app/Contents/Frameworks/" -p @executable_path/../Frameworks/
+          file "$app/Contents/MacOS/ffmpeg" | grep "$binary_arch"
+          file "$app/Contents/MacOS/ffprobe" | grep "$binary_arch"
           "$app/Contents/MacOS/ffmpeg" -hide_banner -encoders 2>&1 | grep h264_videotoolbox
           codesign --force --deep --sign - "$app"
           cp -R "$app" dist/staging/
           cp LICENSE THIRD_PARTY_NOTICES.md dist/staging/
-          (cd dist/staging && ditto -c -k --sequesterRsrc . "../TripWeave-macOS-v${version}.zip")
-          shasum -a 256 "dist/TripWeave-macOS-v${version}.zip" > dist/SHA256SUMS-macOS.txt
+          (cd dist/staging && ditto -c -k --sequesterRsrc . "../TripWeave-macOS-${artifact_arch}-v${version}.zip")
+          shasum -a 256 "dist/TripWeave-macOS-${artifact_arch}-v${version}.zip" > "dist/SHA256SUMS-macOS-${artifact_arch}.txt"
       - uses: actions/upload-artifact@v4
         with:
-          name: TripWeave-macOS
+          name: TripWeave-macOS-${{ matrix.artifact_arch }}
           path: |
             dist/TripWeave-macOS-*.zip
-            dist/SHA256SUMS-macOS.txt
+            dist/SHA256SUMS-macOS-*.txt
           if-no-files-found: error
           retention-days: 30
 

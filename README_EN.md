@@ -33,7 +33,7 @@ Public builds contain no model endpoint, API key, update server, or managed prov
 
 ## Builds
 
-Official Android APKs, Web ZIP, Windows installer, and macOS ZIP are produced only by GitHub-hosted runners in [release.yml](.github/workflows/release.yml). Tags matching `v*` publish all artifacts and checksums to GitHub Releases. GitHub Pages is built from `main` by a separate runner workflow.
+Official Android APKs, Web ZIP, Windows installer, and separate Apple Silicon and Intel macOS ZIPs are produced only by GitHub-hosted runners in [release.yml](.github/workflows/release.yml). Tags matching `v*` publish all artifacts and checksums to GitHub Releases. GitHub Pages is built from `main` by a separate runner workflow.
 
 ## Development
 

@@ -37,7 +37,7 @@ TripWeave 是一款本地优先、面向普通旅行者的跨平台 Vlog 编辑�
 ## 获取构建
 
 - Web 预览由 GitHub Pages runner 从当前 `main` 构建。
-- Android、Web ZIP、Windows 安装包和 macOS ZIP 由 [Build all clients](.github/workflows/release.yml) 在 GitHub 托管 runner 上生成。
+- Android、Web ZIP、Windows 安装包，以及 Apple Silicon / Intel 两种 macOS ZIP，均由 [Build all clients](.github/workflows/release.yml) 在 GitHub 托管 runner 上生成。
 - 打上 `v*` 标签后，工作流会创建 GitHub Release 并附加所有平台产物和 SHA-256。
 
 正式发布包不会使用维护者本机产生的二进制。当前 Android 使用测试签名，macOS 使用临时签名且未公证；公开分发前可在自己的 fork 中接入平台签名凭证。
