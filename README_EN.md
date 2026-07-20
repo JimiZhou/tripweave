@@ -4,7 +4,7 @@
 [![Build all clients](https://github.com/JimiZhou/tripweave/actions/workflows/release.yml/badge.svg)](https://github.com/JimiZhou/tripweave/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[中文](README.md) · [Architecture](docs/ARCHITECTURE.md) · [Configuration](docs/CONFIGURATION.md) · [Contributing](CONTRIBUTING.md)
+[Try online](https://ai.jimizhou.com/tripweave) · [中文](README.md) · [Architecture](docs/ARCHITECTURE.md) · [Configuration](docs/CONFIGURATION.md) · [Contributing](CONTRIBUTING.md)
 
 TripWeave is a local-first, cross-platform travel Vlog editor built from one Flutter codebase. Import photos and videos, choose one of three generated plans, adjust clips and music on a compact timeline, and export a validated MP4 through a hardware-first FFmpeg/WebCodecs pipeline.
 
@@ -33,7 +33,7 @@ Public builds contain no model endpoint, API key, update server, or managed prov
 
 ## Builds
 
-Official Android APKs, Web ZIP, Windows installer, and separate Apple Silicon and Intel macOS ZIPs are produced only by GitHub-hosted runners in [release.yml](.github/workflows/release.yml). Tags matching `v*` publish all artifacts and checksums to GitHub Releases. GitHub Pages is built from `main` by a separate runner workflow.
+Official Android APKs, Web ZIP, Windows installer, and separate Apple Silicon and Intel macOS ZIPs are produced only by GitHub-hosted runners in [release.yml](.github/workflows/release.yml). Tags matching `v*` publish all artifacts and checksums to GitHub Releases. The [hosted web app](https://ai.jimizhou.com/tripweave) runs on independent infrastructure; private website and operations deployment configuration is not part of this repository.
 
 ## Development
 

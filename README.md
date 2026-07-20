@@ -4,7 +4,7 @@
 [![Build all clients](https://github.com/JimiZhou/tripweave/actions/workflows/release.yml/badge.svg)](https://github.com/JimiZhou/tripweave/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[English](README_EN.md) · [架构](docs/ARCHITECTURE.md) · [配置说明](docs/CONFIGURATION.md) · [贡献指南](CONTRIBUTING.md)
+[在线体验](https://ai.jimizhou.com/tripweave) · [English](README_EN.md) · [架构](docs/ARCHITECTURE.md) · [配置说明](docs/CONFIGURATION.md) · [贡献指南](CONTRIBUTING.md)
 
 TripWeave 是一款本地优先、面向普通旅行者的跨平台 Vlog 编辑器。批量导入照片和视频后，可以选择自动生成的三套方案，在同一页面调整片段、背景音乐和剪辑要求，最后通过硬件优先的 FFmpeg/WebCodecs 管线导出 MP4。
 
@@ -36,7 +36,7 @@ TripWeave 是一款本地优先、面向普通旅行者的跨平台 Vlog 编辑�
 
 ## 获取构建
 
-- Web 预览由 GitHub Pages runner 从当前 `main` 构建。
+- [在线版](https://ai.jimizhou.com/tripweave) 部署在独立服务器，公开仓库不包含官网或运营后台的私有部署配置。
 - Android、Web ZIP、Windows 安装包，以及 Apple Silicon / Intel 两种 macOS ZIP，均由 [Build all clients](.github/workflows/release.yml) 在 GitHub 托管 runner 上生成。
 - 打上 `v*` 标签后，工作流会创建 GitHub Release 并附加所有平台产物和 SHA-256。
 
