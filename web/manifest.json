@@ -1,0 +1,35 @@
+{
+    "name": "旅织 TripWeave",
+    "short_name": "旅织",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F6F0E5",
+    "theme_color": "#CD5334",
+    "description": "本地优先的旅行照片美化与 Vlog 自动创作工具。",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
