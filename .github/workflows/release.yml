@@ -41,7 +41,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "dist/TripWeave-Android-armv7-v${version}.apk"
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk "dist/TripWeave-Android-x86_64-v${version}.apk"
           sha256sum dist/* > dist/SHA256SUMS-Android.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: TripWeave-Android
           path: dist/*
@@ -74,7 +74,7 @@ jobs:
           mkdir -p dist
           (cd build/web && zip -qr "../../dist/TripWeave-Web-v${version}.zip" .)
           sha256sum dist/* > dist/SHA256SUMS-Web.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: TripWeave-Web
           path: dist/*
@@ -146,7 +146,7 @@ jobs:
           $file = "dist\TripWeave-Windows-Setup-v$env:APP_VERSION.exe"
           $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $(Split-Path $file -Leaf)" | Out-File "dist\SHA256SUMS-Windows.txt" -Encoding ascii
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: TripWeave-Windows
           path: dist/*
@@ -203,7 +203,7 @@ jobs:
           cp LICENSE THIRD_PARTY_NOTICES.md dist/staging/
           (cd dist/staging && ditto -c -k --sequesterRsrc . "../TripWeave-macOS-${artifact_arch}-v${version}.zip")
           shasum -a 256 "dist/TripWeave-macOS-${artifact_arch}-v${version}.zip" > "dist/SHA256SUMS-macOS-${artifact_arch}.txt"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: TripWeave-macOS-${{ matrix.artifact_arch }}
           path: |
