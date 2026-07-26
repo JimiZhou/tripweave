@@ -5,7 +5,9 @@ import 'package:flutter/widgets.dart';
 
 import 'editing_agent.dart';
 import 'editing_agent_models.dart';
+import 'identity.dart';
 import 'journey_history.dart';
+import 'model_presets.dart';
 import 'models.dart';
 import 'music_catalog.dart';
 import 'platform_video_saver.dart';
@@ -14,12 +16,26 @@ import 'source_file.dart';
 import 'update_service.dart';
 
 class AppState extends ChangeNotifier {
-  AppState({JourneyHistoryStore? historyStore, UpdateService? updateService})
-    : _historyStore = historyStore ?? JourneyHistoryStore(),
-      _updateService = updateService ?? UpdateService();
+  AppState({
+    JourneyHistoryStore? historyStore,
+    UpdateService? updateService,
+    IdentityStore? identityStore,
+    ModelPresetStore? presetStore,
+  }) : _historyStore = historyStore ?? JourneyHistoryStore(),
+       _updateService = updateService ?? UpdateService(),
+       _identityStore = identityStore ?? IdentityStore(),
+       _presetStore = presetStore ?? ModelPresetStore();
 
   final JourneyHistoryStore _historyStore;
   final UpdateService _updateService;
+  final IdentityStore _identityStore;
+  final ModelPresetStore _presetStore;
+  TripIdentity? identity;
+  bool sessionRestored = false;
+  bool adminPasscodeConfigured = false;
+  List<ModelPreset> modelPresets = [];
+  String? defaultModelPresetId;
+  String? activeModelPresetId;
   final List<MediaItem> assets = [];
   List<CompletedJourney> completedJourneys = [];
   final Map<String, List<String>> missingJourneyAssets = {};
@@ -100,6 +116,150 @@ class AppState extends ChangeNotifier {
   Future<void> restoreJourneyHistory() async {
     completedJourneys = await _historyStore.load();
     await _refreshJourneyAvailability();
+    notifyListeners();
+  }
+
+  ModelPreset? get activeModelPreset {
+    final matches = modelPresets.where(
+      (preset) => preset.id == activeModelPresetId,
+    );
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  Future<void> restoreSession() async {
+    try {
+      identity = await _identityStore.loadIdentity();
+      adminPasscodeConfigured = await _identityStore.hasAdminPasscode();
+      modelPresets = await _presetStore.load();
+      defaultModelPresetId = await _presetStore.loadDefaultId();
+      final defaults = modelPresets.where(
+        (preset) => preset.id == defaultModelPresetId && preset.isUsable,
+      );
+      if (!visionConfig.isReady && defaults.isNotEmpty) {
+        visionConfig = defaults.first.toConfig();
+        activeModelPresetId = defaults.first.id;
+      }
+    } catch (_) {
+      // A broken local store must never lock the user out of the workspace.
+    } finally {
+      sessionRestored = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> signInTraveler(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      error = '起个名字，让作品署名更有旅行感。';
+      notifyListeners();
+      return;
+    }
+    identity = TripIdentity(
+      displayName: trimmed,
+      role: TripRole.traveler,
+      signedInAt: DateTime.now(),
+    );
+    await _identityStore.saveIdentity(identity!);
+    error = null;
+    notice = '欢迎回来，$trimmed。素材和成片都留在这台设备上。';
+    notifyListeners();
+  }
+
+  Future<void> signInAdmin(String name, String passcode) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      error = '请填写管理员名称。';
+      notifyListeners();
+      return;
+    }
+    if (passcode.trim().length < 4) {
+      error = '管理口令至少 4 位。';
+      notifyListeners();
+      return;
+    }
+    final firstSetup = !adminPasscodeConfigured;
+    if (adminPasscodeConfigured) {
+      final ok = await _identityStore.verifyAdminPasscode(passcode.trim());
+      if (!ok) {
+        error = '管理口令不正确。';
+        notifyListeners();
+        return;
+      }
+    } else {
+      await _identityStore.saveAdminPasscode(passcode.trim());
+      adminPasscodeConfigured = true;
+    }
+    identity = TripIdentity(
+      displayName: trimmed,
+      role: TripRole.admin,
+      signedInAt: DateTime.now(),
+    );
+    await _identityStore.saveIdentity(identity!);
+    error = null;
+    notice = firstSetup
+        ? '已创建本机管理口令，$trimmed 现在可以维护模型预置。'
+        : '管理员 $trimmed 已登录，可在设置中维护模型预置。';
+    notifyListeners();
+  }
+
+  Future<void> signOut() async {
+    identity = null;
+    await _identityStore.clearIdentity();
+    notice = null;
+    error = null;
+    currentSection = 0;
+    notifyListeners();
+  }
+
+  Future<void> saveModelPreset(ModelPreset preset) async {
+    final index = modelPresets.indexWhere((item) => item.id == preset.id);
+    if (index >= 0) {
+      modelPresets[index] = preset;
+    } else {
+      modelPresets.add(preset);
+    }
+    await _presetStore.save(modelPresets);
+    if (activeModelPresetId == preset.id) {
+      visionConfig = preset.toConfig();
+    }
+    notice = '模型预置“${preset.name}”已保存，旅行者选择后即可直接使用。';
+    notifyListeners();
+  }
+
+  Future<void> deleteModelPreset(String id) async {
+    final removed = modelPresets.where((preset) => preset.id == id).toList();
+    if (removed.isEmpty || removed.first.builtIn) return;
+    modelPresets.removeWhere((preset) => preset.id == id);
+    await _presetStore.save(modelPresets);
+    if (defaultModelPresetId == id) {
+      defaultModelPresetId = null;
+      await _presetStore.saveDefaultId(null);
+    }
+    if (activeModelPresetId == id) {
+      activeModelPresetId = null;
+      visionConfig = const VisionLlmConfig();
+    }
+    notice = '已删除预置“${removed.first.name}”。';
+    notifyListeners();
+  }
+
+  Future<void> setDefaultModelPreset(String? id) async {
+    defaultModelPresetId = id;
+    await _presetStore.saveDefaultId(id);
+    notice = id == null ? '已取消默认预置。' : '新用户进入时将自动启用该预置。';
+    notifyListeners();
+  }
+
+  void applyModelPreset(ModelPreset preset) {
+    if (!preset.isUsable) {
+      error = '该预置缺少接口地址、模型或密钥，请联系管理员补全。';
+      notifyListeners();
+      return;
+    }
+    visionConfig = preset.toConfig();
+    activeModelPresetId = preset.id;
+    error = null;
+    notice = '已启用“${preset.name}”，可以直接开始 AI 剪辑，无需填写密钥。';
     notifyListeners();
   }
 
@@ -414,6 +574,7 @@ class AppState extends ChangeNotifier {
 
   void setVisionConfig(VisionLlmConfig value) {
     visionConfig = value;
+    activeModelPresetId = null;
     notice = value.enabled
         ? '剪辑服务已启用：${value.effectiveVisionModel} 分析画面，${value.planningModel.trim()} 编排视频。'
         : '剪辑服务已关闭，素材整理和人像优化仍可在本机使用。';
@@ -485,7 +646,9 @@ class AppState extends ChangeNotifier {
   Future<void> analyzeWithEditingAgent() async {
     if (isAgentAnalyzing) return;
     if (!visionConfig.isReady) {
-      error = '请先在设置中填写接口地址、规划模型和 API 密钥；视觉模型可留空并复用规划模型。';
+      error = modelPresets.isNotEmpty
+          ? '请先在设置中选择一个管理员预置的剪辑服务，或手动填写接口配置。'
+          : '请先在设置中填写接口地址、规划模型和 API 密钥；视觉模型可留空并复用规划模型。';
       notifyListeners();
       return;
     }

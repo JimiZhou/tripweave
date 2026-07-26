@@ -2,18 +2,36 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tripweave/main.dart' as app;
 import 'package:tripweave/src/app.dart';
 import 'package:tripweave/src/app_state.dart';
 import 'package:tripweave/src/editing_agent_models.dart';
+import 'package:tripweave/src/identity.dart';
 import 'package:tripweave/src/models.dart';
 
+TripIdentity _testIdentity({TripRole role = TripRole.traveler}) => TripIdentity(
+  displayName: '阿织',
+  role: role,
+  signedInAt: DateTime.utc(2026, 7, 27),
+);
+
 void main() {
-  testWidgets('TripWeave launches its guided creation flow', (tester) async {
+  testWidgets('TripWeave gates the workspace behind a device profile', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
     app.main();
     await tester.pumpAndSettle();
 
     expect(find.text('旅织 TripWeave'), findsOneWidget);
+    expect(find.text('开始创作'), findsOneWidget);
+    expect(find.text('批量选择照片和视频'), findsNothing);
+
+    await tester.enterText(find.byType(TextField).first, '阿织');
+    await tester.tap(find.text('开始创作'));
+    await tester.pumpAndSettle();
+
     expect(find.text('批量选择照片和视频'), findsOneWidget);
     expect(find.text('创作'), findsOneWidget);
     expect(find.text('已完成旅程'), findsOneWidget);
@@ -30,7 +48,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final state = AppState();
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState()
+      ..sessionRestored = true
+      ..identity = _testIdentity();
     final png = base64Decode(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
     );

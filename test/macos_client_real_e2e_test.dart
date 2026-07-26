@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tripweave/src/app.dart';
 import 'package:tripweave/src/app_state.dart';
+import 'package:tripweave/src/identity.dart';
 import 'package:tripweave/src/models.dart';
 
 void main() {
@@ -35,7 +36,13 @@ void main() {
       expect(sourceFiles.length, greaterThanOrEqualTo(3));
       debugPrint('[client-e2e] found ${sourceFiles.length} source files');
 
-      final state = AppState();
+      final state = AppState()
+        ..sessionRestored = true
+        ..identity = TripIdentity(
+          displayName: 'E2E 旅行者',
+          role: TripRole.traveler,
+          signedInAt: DateTime.now(),
+        );
       await tester.pumpWidget(TripWeaveApp(state: state));
       debugPrint('[client-e2e] widget pumped');
       await _pumpFrames(tester);

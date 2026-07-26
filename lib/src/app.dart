@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'editing_agent_models.dart';
 import 'gpu_beauty_image.dart';
+import 'identity.dart';
 import 'journey_history.dart';
+import 'model_presets.dart';
 import 'models.dart';
 import 'music_catalog.dart';
 import 'rendered_video_preview.dart';
@@ -44,6 +46,8 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    if (!state.sessionRestored) return const _SessionSplash();
+    if (state.identity == null) return const WelcomePage();
     return LayoutBuilder(
       builder: (context, constraints) {
         final desktop = constraints.maxWidth >= 920;
@@ -103,6 +107,252 @@ class AppShell extends StatelessWidget {
   }
 }
 
+class _SessionSplash extends StatelessWidget {
+  const _SessionSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _BrandMark(),
+            const SizedBox(height: 24),
+            SizedBox.square(
+              dimension: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.6,
+                color: TripColors.paprika,
+                backgroundColor: TripColors.paperDeep,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              '正在唤醒你的旅程…',
+              style: TextStyle(color: Color(0xFF776C60)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WelcomePage extends StatefulWidget {
+  const WelcomePage({super.key});
+
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> {
+  final nameController = TextEditingController();
+  final passcodeController = TextEditingController();
+  bool adminMode = false;
+  bool obscurePasscode = true;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    passcodeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppStateScope.of(context);
+    final wide = MediaQuery.sizeOf(context).width >= 980;
+    final form = _buildForm(context, state);
+    return Scaffold(
+      body: wide
+          ? Row(
+              children: [
+                const Expanded(flex: 5, child: _WelcomeHeroPanel()),
+                Expanded(
+                  flex: 4,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(40),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: form,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: form,
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildForm(BuildContext context, AppState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _BrandMark(),
+        const SizedBox(height: 30),
+        Text(
+          adminMode ? '管理员入口' : '欢迎回来，\n继续你的旅程',
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(
+            fontSize: MediaQuery.sizeOf(context).width < 600 ? 34 : 42,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          adminMode
+              ? (state.adminPasscodeConfigured
+                    ? '输入本机管理口令，维护旅行者可直接选用的模型预置。'
+                    : '首次使用：设置本机管理口令（至少 4 位），之后即可预置剪辑模型。')
+              : '登录只在这台设备上创建创作档案，素材、成片和历史都不会上传。',
+          style: const TextStyle(
+            fontSize: 15,
+            height: 1.6,
+            color: Color(0xFF62594F),
+          ),
+        ),
+        const SizedBox(height: 28),
+        TextField(
+          controller: nameController,
+          textInputAction: adminMode
+              ? TextInputAction.next
+              : TextInputAction.done,
+          onSubmitted: adminMode ? null : (_) => _submit(state),
+          decoration: InputDecoration(
+            labelText: adminMode ? '管理员名称' : '你的名字',
+            hintText: adminMode ? '例如：站点管理员' : '例如：阿织',
+            prefixIcon: const Icon(Icons.badge_outlined),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        if (adminMode) ...[
+          const SizedBox(height: 14),
+          TextField(
+            controller: passcodeController,
+            obscureText: obscurePasscode,
+            onSubmitted: (_) => _submit(state),
+            decoration: InputDecoration(
+              labelText: state.adminPasscodeConfigured ? '管理口令' : '设置管理口令',
+              prefixIcon: const Icon(Icons.key_outlined),
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                onPressed: () =>
+                    setState(() => obscurePasscode = !obscurePasscode),
+                tooltip: obscurePasscode ? '显示口令' : '隐藏口令',
+                icon: Icon(
+                  obscurePasscode ? Icons.visibility : Icons.visibility_off,
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (state.error != null) ...[
+          const SizedBox(height: 14),
+          Text(
+            state.error!,
+            style: const TextStyle(
+              color: TripColors.danger,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+        const SizedBox(height: 22),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: FilledButton.icon(
+            onPressed: () => _submit(state),
+            icon: Icon(
+              adminMode ? Icons.admin_panel_settings_outlined : Icons.flight_takeoff,
+            ),
+            label: Text(adminMode ? '进入管理' : '开始创作'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextButton(
+          onPressed: () {
+            state.clearMessage();
+            setState(() => adminMode = !adminMode);
+          },
+          child: Text(adminMode ? '← 返回旅行者登录' : '管理员入口 · 预置剪辑模型'),
+        ),
+        const SizedBox(height: 18),
+        const _PrivacyMark(),
+      ],
+    );
+  }
+
+  void _submit(AppState state) {
+    if (adminMode) {
+      state.signInAdmin(nameController.text, passcodeController.text);
+    } else {
+      state.signInTraveler(nameController.text);
+    }
+  }
+}
+
+class _WelcomeHeroPanel extends StatelessWidget {
+  const _WelcomeHeroPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: TripColors.indigo,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const _AbstractTravelFrame(color: TripColors.indigo),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x8830455B), Color(0x2230455B)],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(48),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  '把旅程\n织成 Vlog',
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    color: TripColors.paper,
+                    fontSize: 56,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '批量导入照片视频 · AI 生成三套剪辑模板 · 本机渲染导出 MP4',
+                  style: TextStyle(
+                    color: Color(0xFFD3DAD7),
+                    fontSize: 16,
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DesktopNavigation extends StatelessWidget {
   const _DesktopNavigation({
     required this.selectedIndex,
@@ -156,7 +406,55 @@ class _DesktopNavigation extends StatelessWidget {
             const SizedBox(height: 12),
           ],
           const Spacer(),
+          _NavIdentityBadge(identity: AppStateScope.of(context).identity),
+          const SizedBox(height: 14),
           const _PrivacyMark(compact: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavIdentityBadge extends StatelessWidget {
+  const _NavIdentityBadge({required this.identity});
+  final TripIdentity? identity;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = identity;
+    if (current == null) return const SizedBox.shrink();
+    return Tooltip(
+      message: current.isAdmin
+          ? '${current.displayName} · 管理员'
+          : current.displayName,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 17,
+            backgroundColor: current.isAdmin
+                ? TripColors.sun
+                : TripColors.moss,
+            child: Text(
+              current.initial,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: current.isAdmin ? TripColors.ink : TripColors.paper,
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          SizedBox(
+            width: 82,
+            child: Text(
+              current.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
@@ -458,6 +756,19 @@ class _ImportStep extends StatelessWidget {
             children: [
               const _BrandMark(),
               const SizedBox(height: 28),
+              if (state.identity != null) ...[
+                Text(
+                  '你好，${state.identity!.displayName} · 新的旅程从这里开始',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w800,
+                    color: TripColors.paprikaDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               Text(
                 '导入旅行素材，\n快速生成 Vlog',
                 textAlign: TextAlign.center,
@@ -4074,6 +4385,8 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 8),
         Text('创作方式，由你决定', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 32),
+        _AccountCard(state: state),
+        const SizedBox(height: 20),
         _SettingsGroup(
           title: '隐私与原片',
           children: [
@@ -4092,6 +4405,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         const SizedBox(height: 20),
+        if (state.modelPresets.isNotEmpty) ...[
+          _PresetPickerCard(state: state),
+          const SizedBox(height: 20),
+        ],
+        if (state.identity?.isAdmin == true) ...[
+          _ModelPresetAdminCard(state: state),
+          const SizedBox(height: 20),
+        ],
         const _VisionSettingsCard(),
         const SizedBox(height: 20),
         _SettingsGroup(
@@ -4125,6 +4446,531 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ],
     );
+  }
+}
+
+class _AccountCard extends StatelessWidget {
+  const _AccountCard({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final identity = state.identity;
+    if (identity == null) return const SizedBox.shrink();
+    return Material(
+      color: TripColors.paperDeep,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: identity.isAdmin
+                  ? TripColors.sun
+                  : TripColors.moss,
+              child: Text(
+                identity.initial,
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: identity.isAdmin ? TripColors.ink : TripColors.paper,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          identity.displayName,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _Badge(
+                        text: identity.isAdmin ? '管理员' : '旅行者',
+                        color: identity.isAdmin
+                            ? TripColors.paprikaDark
+                            : TripColors.moss,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '档案只保存在本机，用于署名和恢复创作偏好。',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF62594F)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: state.signOut,
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('退出登录'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PresetPickerCard extends StatelessWidget {
+  const _PresetPickerCard({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: TripColors.paperDeep,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: TripColors.paprika),
+                const SizedBox(width: 8),
+                Text('剪辑服务预置', style: Theme.of(context).textTheme.titleLarge),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '由管理员配置好的 AI 剪辑通道，选择即可使用，无需填写接口和密钥。',
+              style: TextStyle(fontSize: 13, color: Color(0xFF62594F)),
+            ),
+            const SizedBox(height: 12),
+            for (final preset in state.modelPresets)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _PresetTile(
+                  preset: preset,
+                  active: state.activeModelPresetId == preset.id,
+                  isDefault: state.defaultModelPresetId == preset.id,
+                  onApply: () => state.applyModelPreset(preset),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PresetTile extends StatelessWidget {
+  const _PresetTile({
+    required this.preset,
+    required this.active,
+    required this.isDefault,
+    required this.onApply,
+  });
+
+  final ModelPreset preset;
+  final bool active;
+  final bool isDefault;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFFEFE0CE) : TripColors.paper,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: active ? TripColors.paprika : const Color(0xFFD8CCBC),
+          width: active ? 1.6 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        preset.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    if (isDefault) ...[
+                      const SizedBox(width: 8),
+                      const _Badge(text: '默认', color: TripColors.indigo),
+                    ],
+                    if (preset.builtIn) ...[
+                      const SizedBox(width: 8),
+                      const _Badge(text: '部署内置', color: TripColors.moss),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  preset.note.trim().isNotEmpty
+                      ? preset.note
+                      : '规划：${preset.planningModel}'
+                            '${preset.visionModel.trim().isEmpty ? '' : ' · 视觉：${preset.visionModel}'}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF62594F),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          active
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: Icon(Icons.check_circle, color: TripColors.paprika),
+                )
+              : FilledButton.tonal(
+                  onPressed: onApply,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: TripColors.ink,
+                    foregroundColor: TripColors.paper,
+                    minimumSize: const Size(64, 40),
+                  ),
+                  child: const Text('使用'),
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelPresetAdminCard extends StatelessWidget {
+  const _ModelPresetAdminCard({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: TripColors.ink,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: TripColors.sun,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    '模型预置管理',
+                    style: TextStyle(
+                      color: TripColors.paper,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _editPreset(context, state, null),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: TripColors.sun,
+                    foregroundColor: TripColors.ink,
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('新建预置'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '预置保存在本机，旅行者选择后即可直接使用剪辑服务，密钥不会展示。'
+              '设为默认后，新会话会自动启用。',
+              style: TextStyle(color: Color(0xFFCFC5B8), height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            if (state.modelPresets.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  '还没有预置。新建一个，让这台设备上的旅行者免配置使用 AI 剪辑。',
+                  style: TextStyle(color: Color(0xFFCFC5B8)),
+                ),
+              ),
+            for (final preset in state.modelPresets)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF37322C),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    preset.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: TripColors.paper,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                if (state.defaultModelPresetId ==
+                                    preset.id) ...[
+                                  const SizedBox(width: 8),
+                                  const _Badge(
+                                    text: '默认',
+                                    color: TripColors.indigo,
+                                  ),
+                                ],
+                                if (preset.builtIn) ...[
+                                  const SizedBox(width: 8),
+                                  const _Badge(
+                                    text: '部署内置',
+                                    color: TripColors.moss,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${preset.endpoint}\n规划：${preset.planningModel}'
+                              '${preset.visionModel.trim().isEmpty ? '' : ' · 视觉：${preset.visionModel}'}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFFCFC5B8),
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => state.setDefaultModelPreset(
+                          state.defaultModelPresetId == preset.id
+                              ? null
+                              : preset.id,
+                        ),
+                        tooltip: state.defaultModelPresetId == preset.id
+                            ? '取消默认'
+                            : '设为默认',
+                        icon: Icon(
+                          state.defaultModelPresetId == preset.id
+                              ? Icons.star
+                              : Icons.star_border,
+                          color: TripColors.sun,
+                        ),
+                      ),
+                      if (!preset.builtIn) ...[
+                        IconButton(
+                          onPressed: () => _editPreset(context, state, preset),
+                          tooltip: '编辑',
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            color: TripColors.paper,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => state.deleteModelPreset(preset.id),
+                          tooltip: '删除',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFE39C8B),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editPreset(
+    BuildContext context,
+    AppState state,
+    ModelPreset? existing,
+  ) async {
+    final preset = await showDialog<ModelPreset>(
+      context: context,
+      builder: (context) => _PresetEditorDialog(existing: existing),
+    );
+    if (preset != null) await state.saveModelPreset(preset);
+  }
+}
+
+class _PresetEditorDialog extends StatefulWidget {
+  const _PresetEditorDialog({this.existing});
+  final ModelPreset? existing;
+
+  @override
+  State<_PresetEditorDialog> createState() => _PresetEditorDialogState();
+}
+
+class _PresetEditorDialogState extends State<_PresetEditorDialog> {
+  late final nameController = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late final endpointController = TextEditingController(
+    text: widget.existing?.endpoint ?? '',
+  );
+  late final proxyController = TextEditingController(
+    text: widget.existing?.proxyEndpoint ?? '',
+  );
+  late final planningController = TextEditingController(
+    text: widget.existing?.planningModel ?? '',
+  );
+  late final visionController = TextEditingController(
+    text: widget.existing?.visionModel ?? '',
+  );
+  late final keyController = TextEditingController(
+    text: widget.existing?.apiKey ?? '',
+  );
+  late final noteController = TextEditingController(
+    text: widget.existing?.note ?? '',
+  );
+  bool obscureKey = true;
+  String? validationMessage;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    endpointController.dispose();
+    proxyController.dispose();
+    planningController.dispose();
+    visionController.dispose();
+    keyController.dispose();
+    noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.existing == null ? '新建模型预置' : '编辑模型预置'),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _field(nameController, '预置名称', '例如：家庭共享通道'),
+              _field(
+                endpointController,
+                '接口地址',
+                'https://example.com/v1/chat/completions',
+              ),
+              _field(proxyController, 'Web CORS 代理（可选）', ''),
+              _field(planningController, '规划模型', 'your-planning-model'),
+              _field(visionController, '视觉模型（可留空复用规划模型）', ''),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: keyController,
+                  obscureText: obscureKey,
+                  decoration: InputDecoration(
+                    labelText: 'API 密钥',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () =>
+                          setState(() => obscureKey = !obscureKey),
+                      icon: Icon(
+                        obscureKey ? Icons.visibility : Icons.visibility_off,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              _field(noteController, '给旅行者的说明（可选）', '例如：适合 3 分钟以内的短片'),
+              if (validationMessage != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    validationMessage!,
+                    style: const TextStyle(
+                      color: TripColors.danger,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('保存预置')),
+      ],
+    );
+  }
+
+  Widget _field(TextEditingController controller, String label, String hint) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint.isEmpty ? null : hint,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  void _save() {
+    final preset = ModelPreset(
+      id:
+          widget.existing?.id ??
+          'preset-${DateTime.now().microsecondsSinceEpoch}',
+      name: nameController.text.trim(),
+      endpoint: endpointController.text.trim(),
+      proxyEndpoint: proxyController.text.trim(),
+      planningModel: planningController.text.trim(),
+      visionModel: visionController.text.trim(),
+      apiKey: keyController.text.trim(),
+      note: noteController.text.trim(),
+    );
+    if (preset.name.isEmpty || !preset.isUsable) {
+      setState(
+        () => validationMessage = '名称、接口地址、规划模型和 API 密钥都需要填写。',
+      );
+      return;
+    }
+    Navigator.of(context).pop(preset);
   }
 }
 
@@ -4188,7 +5034,7 @@ class _VisionSettingsCardState extends State<_VisionSettingsCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '剪辑服务',
+                        '自定义剪辑服务（高级）',
                         style: TextStyle(
                           color: TripColors.paper,
                           fontSize: 20,
@@ -4197,7 +5043,7 @@ class _VisionSettingsCardState extends State<_VisionSettingsCard> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '可分别配置视觉理解与 ReAct 规划模型；视觉模型留空时复用同一个多模态模型。密钥只保留在当前会话内。',
+                        '有管理员预置时无需填写本卡片。可分别配置视觉理解与 ReAct 规划模型；视觉模型留空时复用同一个多模态模型。手动填写的密钥只保留在当前会话内。',
                         style: TextStyle(
                           color: Color(0xFFD3DAD7),
                           height: 1.45,
