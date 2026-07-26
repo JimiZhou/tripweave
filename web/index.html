@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,7 +18,12 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="旅织 TripWeave：本地优先的旅行照片美化与 Vlog 自动创作工具。">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="旅织 TripWeave：本地优先的旅行照片美化与 Vlog 自动创作工具。批量导入照片视频，AI 生成三套剪辑模板，本机渲染导出 MP4。">
+  <meta name="theme-color" content="#CD5334">
+  <meta property="og:title" content="旅织 TripWeave · 把旅程织成 Vlog">
+  <meta property="og:description" content="本地优先的旅行 Vlog 编辑器：素材不离开设备，AI 帮你完成剪辑。">
+  <meta property="og:type" content="website">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,10 +34,101 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>旅织 TripWeave</title>
+  <title>旅织 TripWeave · 把旅程织成 Vlog</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #F6F0E5;
+    }
+    #tripweave-splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background:
+        radial-gradient(1200px 500px at 80% -10%, rgba(240, 181, 82, .28), transparent 60%),
+        radial-gradient(900px 420px at -10% 110%, rgba(82, 100, 77, .22), transparent 60%),
+        #F6F0E5;
+      font-family: "Manrope", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      color: #27231F;
+      z-index: 9999;
+      transition: opacity .45s ease;
+    }
+    #tripweave-splash.tw-hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .tw-mark {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #CD5334;
+      color: #F6F0E5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      font-weight: 700;
+      font-family: "Fraunces", Georgia, "Noto Serif SC", serif;
+      box-shadow: 0 14px 34px rgba(205, 83, 52, .32);
+      animation: tw-breathe 2.2s ease-in-out infinite;
+    }
+    .tw-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+    .tw-tagline {
+      font-size: 14px;
+      color: #62594F;
+    }
+    .tw-track {
+      width: 168px;
+      height: 4px;
+      border-radius: 4px;
+      background: #ECE1D0;
+      overflow: hidden;
+    }
+    .tw-track::after {
+      content: "";
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 4px;
+      background: #CD5334;
+      animation: tw-run 1.3s ease-in-out infinite;
+    }
+    @keyframes tw-breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    @keyframes tw-run {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(390%); }
+    }
+  </style>
 </head>
 <body>
+  <div id="tripweave-splash" aria-label="旅织 TripWeave 正在加载">
+    <div class="tw-mark">旅</div>
+    <div class="tw-name">旅织 TripWeave</div>
+    <div class="tw-tagline">把旅程织成 Vlog · 素材不离开设备</div>
+    <div class="tw-track"></div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var splash = document.getElementById('tripweave-splash');
+      if (!splash) return;
+      splash.classList.add('tw-hide');
+      setTimeout(function () { splash.remove(); }, 500);
+    });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
