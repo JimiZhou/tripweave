@@ -19,6 +19,33 @@ Completions endpoint, planning model, optional vision model, and API key.
 Credentials entered in the open-source build are session-scoped. Do not put an
 API key in Dart source, `--dart-define`, a workflow file, or a public Web build.
 
+## Admin model presets
+
+The sign-in screen has an admin entry (管理员入口). The first admin sign-in on a
+device sets a local passcode (stored as a salted SHA-256 digest); later admin
+sign-ins verify it. Admins see **Settings → 模型预置管理** where they can:
+
+- create named presets (endpoint, planning/vision model, API key, note),
+- mark one preset as the default, which is auto-applied for new sessions,
+- edit or delete device-local presets.
+
+Travelers pick a preset from **Settings → 剪辑服务预置** and never see the API
+key. Presets are stored on the device via `shared_preferences`; there is still
+no hosted account or configuration service.
+
+Private deployments may additionally bake presets into a build:
+
+```json
+{
+  "TRIPWEAVE_MODEL_PRESETS": "[{\"id\":\"studio\",\"name\":\"工作室通道\",\"endpoint\":\"https://llm.example.com/v1/chat/completions\",\"planningModel\":\"planner\",\"visionModel\":\"vision\",\"apiKey\":\"sk-...\",\"note\":\"内部使用\"}]"
+}
+```
+
+Built-in presets appear with a “部署内置” badge and cannot be edited or deleted
+on the device. A dart-define value is embedded in the binary — for Web builds it
+is downloadable JavaScript, so only use it behind access control, never in a
+public deployment.
+
 ## Optional public service endpoints
 
 `tool/dart-defines.example.json` documents two optional, non-secret values:

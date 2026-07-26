@@ -19,6 +19,8 @@ This repository contains the Flutter application and runner build definitions on
 ## Highlights
 
 - Android, Web, Windows, and macOS from one Flutter project.
+- Device-local sign-in profiles, with an admin role unlocked by an on-device passcode.
+- Admin-managed model presets: travelers apply a preset with one tap and never see the API key.
 - Batch media selection, local GPU portrait presets, and local rendering.
 - Optional OpenAI-compatible vision and planning models with a ReAct editing loop.
 - Three explainable plans, synchronized source audio and CC0 music preview, and a simple editable timeline.
@@ -29,7 +31,7 @@ This repository contains the Flutter application and runner build definitions on
 
 The complete editing path works without a cloud service. When the optional agent is enabled, TripWeave sends a compressed contact sheet and media metadata for the explicit analysis request; the built-in loop does not upload original videos.
 
-Public builds contain no model endpoint, API key, update server, or managed provisioning service. Users enter their own compatible endpoint and credentials in Settings. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+Public builds contain no model endpoint, API key, update server, or managed provisioning service. Sign-in creates a device-only profile; there is no account server. Users enter their own compatible endpoint and credentials in Settings (session-scoped), or a device admin saves them as reusable presets stored locally. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Builds
 
